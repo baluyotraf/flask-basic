@@ -1,9 +1,13 @@
 from flask import Flask, request, jsonify, url_for
 from config import Configuration
+from model import db, ma
 
 
 app = Flask(__name__, static_folder=None)
 app.config.from_object(Configuration())
+
+db.init_app(app)
+ma.init_app(app)
 
 
 # Route Creation
