@@ -10,3 +10,7 @@ class Configuration(metaclass=MetaFlaskEnv):
     # Flask-SQLAlchemy Configs
     SQLALCHEMY_DATABASE_URI = 'mysql://root:root@localhost/db'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+
+    # Token Generation Configs
+    ITSDANGEROUS_SECRET_KEY = 'hello'
+    ITSDANGEROUS_EXPIRY_SECS = 24 * 3600
