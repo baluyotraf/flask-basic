@@ -27,7 +27,12 @@ class Ticket(db.Model):
     user_id = sqla.Column(sqla.Integer, sqla.ForeignKey('users.id'))
 
 
-class UserSchema(ma.ModelSchema):
+class BasicUserSchema(ma.ModelSchema):
+    class Meta:
+        fields = ('id', 'username')
+
+
+class DetailedUserSchema(ma.ModelSchema):
     class Meta:
         fields = ('id', 'username', 'first_name', 'last_name')
 
