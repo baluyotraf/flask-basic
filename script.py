@@ -9,15 +9,15 @@ def cli():
 
 
 @cli.command()
-@click.argument('name')
-def create_user(name):
-    """Creates a user"""
-    print("user created: ", name)
+def init_db():
+    """Creates database tables"""
+    db.create_all()
 
 
 @cli.command()
-def init_db():
-    db.create_all()
+def delete_db():
+    """Deletes all database tables"""
+    db.drop_all()
 
 
 if __name__ == '__main__':
