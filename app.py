@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify, url_for
 from config import Configuration
-from model import db, ma
+from model import db, ma, User, BasicUserSchema, DetailedUserSchema
+from werkzeug.security import generate_password_hash, check_password_hash
 
 
 app = Flask(__name__, static_folder=None)
@@ -79,3 +80,67 @@ def routes():
         'routes': url_for('routes'),
     }
     return jsonify(jdict)
+
+
+# Users CRUD
+@app.route("/users", methods=['GET'])
+def get_users():
+    users = User.query.all()
+    schema = BasicUserSchema(many=True)
+    response = {
+        'users': schema.dump(users).data
+    }
+
+    return jsonify(response)
+
+
+@app.route("/users", methods=['POSt'])
+def create_user():
+    fields = ['username', 'first_name', 'last_name']
+    payload = request.get_json()
+    user_data = {f: payload[f] for f in fields}
+    user_data['password'] = generate_password_hash(payload['password'])
+    user = User(**user_data)
+    db.session.add(user)
+    db.session.commit()
+
+    schema = DetailedUserSchema()
+    response = schema.jsonify(user)
+
+    return response, 201, {'location': url_for('get_user', id=user.id)}
+
+
+@app.route("/users/<int:id>", methods=['GET'])
+def get_user(id):
+    format = request.args.get('format', 'detailed')
+    if format == 'detailed':
+        schema = DetailedUserSchema()
+    else:
+        schema = BasicUserSchema()
+
+    user = User.query.get_or_404(id)
+    response = schema.jsonify(user)
+
+    return response, 200
+
+
+@app.route("/users/<int:id>", methods=['PATCH'])
+def edit_user(id):
+    user = User.query.get_or_404(id)
+    payload = request.get_json()
+    user.password = generate_password_hash(payload['password'])
+    db.session.commit()
+
+    schema = DetailedUserSchema()
+    response = schema.jsonify(user)
+
+    return response, 202
+
+
+@app.route("/users/<int:id>", methods=['DELETE'])
+def delete_user(id):
+    user = User.query.get_or_404(id)
+    db.session.delete(user)
+    db.session.commit()
+
+    return jsonify({}), 204
