@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify, url_for
 from config import Configuration
 from model import db, ma, User, BasicUserSchema, DetailedUserSchema
 from werkzeug.security import generate_password_hash, check_password_hash
+from itsdangerous import TimedJSONWebSignatureSerializer, BadSignature, SignatureExpired
 
 
 app = Flask(__name__, static_folder=None)
@@ -144,3 +145,48 @@ def delete_user(id):
     db.session.commit()
 
     return jsonify({}), 204
+
+
+@app.route("/tokens", methods=['GET'])
+def create_token():
+    auth = request.authorization
+    username = auth.username
+    password = auth.password
+
+    user = User.query.filter_by(username=username).first()
+    if user and check_password_hash(user.password, password):
+        key = app.config['ITSDANGEROUS_SECRET_KEY']
+        expiry_s = app.config['ITSDANGEROUS_EXPIRY_SECS']
+        serializer = TimedJSONWebSignatureSerializer(key, expiry_s)
+        token_content = {'id': user.id}
+        token = serializer.dumps(token_content)
+        response = {'token': token.decode('utf-8')}
+        return jsonify(response), 200
+    else:
+        response = {'message': 'access denied'}
+        return jsonify(response), 401
+
+
+@app.route("/tokens/verification", methods=['GET'])
+def verify_token():
+    auth_header = request.headers['Authorization']
+    _, token = auth_header.split(None, 1)
+
+    key = app.config['ITSDANGEROUS_SECRET_KEY']
+    expiry_s = app.config['ITSDANGEROUS_EXPIRY_SECS']
+    serializer = TimedJSONWebSignatureSerializer(key, expiry_s)
+
+    try:
+        token_content = serializer.loads(token)
+    except(BadSignature, SignatureExpired):
+        response = {'message': 'access denied'}
+        return jsonify(response), 401
+
+    user_id = token_content['id']
+    user = User.query.get(user_id)
+    if user:
+        response = {'message': 'token verified'}
+        return jsonify(response), 200
+    else:
+        response = {'message': 'access denied'}
+        return jsonify(response), 401
